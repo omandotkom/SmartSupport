@@ -10,9 +10,6 @@ out/
 # production
 build/
 
-# env files
-.env*.local
-
 # persistent data (PVC mount)
 data/
 
