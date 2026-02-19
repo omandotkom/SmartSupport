@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "WebSearch",
+      "WebFetch(domain:node-llama-cpp.withcat.ai)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install)",
+      "Bash(npx prisma db push)",
+      "Bash(npx next build:*)",
+      "Bash(timeout 15 npx next dev:*)"
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartsupport
+  labels:
+    app: smartsupport
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: smartsupport
+  template:
+    metadata:
+      labels:
+        app: smartsupport
+    spec:
+      containers:
+        - name: smartsupport
+          image: image-registry.openshift-image-registry.svc:5000/NAMESPACE/smartsupport:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATA_DIR
+              value: /app/data
+            - name: DATABASE_URL
+              value: "file:/app/data/smartsupport.db"
+            - name: LLM_GPU_LAYERS
+              value: "0"
+            - name: LLM_CONTEXT_SIZE
+              value: "4096"
+            - name: CHUNK_SIZE
+              value: "1000"
+            - name: CHUNK_OVERLAP
+              value: "200"
+            - name: TOP_K_RESULTS
+              value: "5"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              memory: "6Gi"
+              cpu: "2"
+            limits:
+              memory: "8Gi"
+              cpu: "4"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: smartsupport-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smartsupport
+  labels:
+    app: smartsupport
+spec:
+  selector:
+    app: smartsupport
+  ports:
+    - port: 3000
+      targetPort: 3000
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: smartsupport
+  labels:
+    app: smartsupport
+spec:
+  to:
+    kind: Service
+    name: smartsupport
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
