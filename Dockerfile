@@ -15,7 +15,6 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npx prisma generate --no-engine
 RUN npm run build
 
 FROM node:20-bookworm-slim AS runner
@@ -27,8 +26,7 @@ ENV NODE_ENV=production
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Copy Prisma client and schema
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy Prisma schema
 COPY --from=builder /app/prisma ./prisma
 
 # Copy node-llama-cpp native binaries
