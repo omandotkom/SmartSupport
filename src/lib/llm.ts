@@ -111,51 +111,60 @@ export async function* generateStream(
 
   const { LlamaChatSession } = await import("node-llama-cpp");
 
+  const sequence = (state.context as { getSequence: () => { dispose?: () => void } }).getSequence() as never;
   const session = new LlamaChatSession({
-    contextSequence: (state.context as { getSequence: () => unknown }).getSequence() as never,
+    contextSequence: sequence,
     systemPrompt,
+    autoDisposeSequence: true,
   });
 
   const chunks: string[] = [];
-  let resolveChunk: ((value: string | null) => void) | null = null;
+  let wakeUp: (() => void) | null = null;
+  let isDone = false;
+  let promptError: unknown = null;
 
-  const chunkPromise = () =>
-    new Promise<string | null>((resolve) => {
-      resolveChunk = resolve;
+  const notify = () => {
+    if (wakeUp) {
+      const current = wakeUp;
+      wakeUp = null;
+      current();
+    }
+  };
+
+  const waitForChunk = () =>
+    new Promise<void>((resolve) => {
+      wakeUp = resolve;
     });
 
-  // Run prompt in background, pushing chunks as they arrive
   const promptDone = session.prompt(userMessage, {
     onTextChunk(chunk: string) {
-      if (resolveChunk) {
-        const r = resolveChunk;
-        resolveChunk = null;
-        r(chunk);
-      } else {
-        chunks.push(chunk);
-      }
+      chunks.push(chunk);
+      notify();
     },
-  }).then(() => {
-    // Signal completion
-    if (resolveChunk) {
-      resolveChunk(null);
-    } else {
-      chunks.push("__DONE__");
-    }
-  });
+  })
+    .catch((err) => {
+      promptError = err;
+    })
+    .finally(() => {
+      isDone = true;
+      notify();
+    });
 
-  // Yield chunks as they arrive
-  while (true) {
-    if (chunks.length > 0) {
-      const chunk = chunks.shift()!;
-      if (chunk === "__DONE__") break;
-      yield chunk;
-    } else {
-      const chunk = await chunkPromise();
-      if (chunk === null) break;
-      yield chunk;
+  try {
+    while (!isDone || chunks.length > 0) {
+      if (chunks.length === 0) {
+        await waitForChunk();
+        continue;
+      }
+      yield chunks.shift()!;
     }
+
+    await promptDone;
+
+    if (promptError) {
+      throw promptError;
+    }
+  } finally {
+    session.dispose({ disposeSequence: true });
   }
-
-  await promptDone;
 }

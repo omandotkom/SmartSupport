@@ -3,6 +3,12 @@
 import { create } from "zustand";
 import type { ChatSession, ChatMessage, SourceReference } from "@/types";
 
+async function parseJsonOrNull<T>(res: Response): Promise<T | null> {
+  const text = await res.text();
+  if (!text.trim()) return null;
+  return JSON.parse(text) as T;
+}
+
 interface ChatState {
   sessions: ChatSession[];
   activeSessionId: string | null;
@@ -27,9 +33,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingSources: [],
 
   fetchSessions: async () => {
-    const res = await fetch("/api/sessions");
-    const sessions = await res.json();
-    set({ sessions });
+    try {
+      const res = await fetch("/api/sessions");
+      const sessions = await parseJsonOrNull<ChatSession[]>(res);
+
+      if (!res.ok) {
+        throw new Error("Failed to load sessions");
+      }
+
+      set({ sessions: Array.isArray(sessions) ? sessions : [] });
+    } catch {
+      set({ sessions: [] });
+    }
   },
 
   createSession: async (title: string) => {
@@ -38,7 +53,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });
-    const session = await res.json();
+    const session = await parseJsonOrNull<ChatSession>(res);
+
+    if (!res.ok || !session) {
+      throw new Error("Failed to create session");
+    }
+
     set((state) => ({ sessions: [session, ...state.sessions] }));
     await get().setActiveSession(session.id);
     return session;
@@ -65,8 +85,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ activeSessionId: id, messages: [], streamingContent: "", streamingSources: [] });
     const res = await fetch(`/api/sessions/${id}`);
     if (res.ok) {
-      const data = await res.json();
-      set({ messages: data.messages });
+      const data = await parseJsonOrNull<{ messages?: ChatMessage[] }>(res);
+      set({ messages: data?.messages ?? [] });
     }
   },
 
@@ -97,8 +117,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Chat request failed");
+        const err = await parseJsonOrNull<{ error?: string }>(res);
+        throw new Error(err?.error || "Chat request failed");
       }
 
       const reader = res.body!.getReader();
