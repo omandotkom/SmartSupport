@@ -27,3 +27,4 @@ Thumbs.db
 
 # Deployment manifests are not needed inside app image
 openshift
+oc.exe
