@@ -55,8 +55,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const chunkSize = parseInt(process.env.CHUNK_SIZE || "1000", 10);
-    const chunkOverlap = parseInt(process.env.CHUNK_OVERLAP || "200", 10);
+    const parsedChunkSize = Number.parseInt(process.env.CHUNK_SIZE || "1000", 10);
+    const parsedChunkOverlap = Number.parseInt(process.env.CHUNK_OVERLAP || "200", 10);
+    const chunkSize =
+      Number.isFinite(parsedChunkSize) && parsedChunkSize > 0
+        ? parsedChunkSize
+        : 1000;
+    const chunkOverlap =
+      Number.isFinite(parsedChunkOverlap) && parsedChunkOverlap >= 0
+        ? parsedChunkOverlap
+        : 200;
+
+    if (chunkOverlap >= chunkSize) {
+      return NextResponse.json(
+        { error: "Konfigurasi chunk tidak valid: CHUNK_OVERLAP harus lebih kecil dari CHUNK_SIZE" },
+        { status: 400 }
+      );
+    }
+
     const chunks = chunkText(content, chunkSize, chunkOverlap);
 
     // Save to database

@@ -30,6 +30,16 @@ export function chunkText(
   chunkSize: number = 1000,
   overlap: number = 200
 ): string[] {
+  if (!Number.isFinite(chunkSize) || chunkSize <= 0) {
+    throw new Error("CHUNK_SIZE harus berupa angka > 0");
+  }
+  if (!Number.isFinite(overlap) || overlap < 0) {
+    throw new Error("CHUNK_OVERLAP harus berupa angka >= 0");
+  }
+  if (overlap >= chunkSize) {
+    throw new Error("CHUNK_OVERLAP harus lebih kecil dari CHUNK_SIZE");
+  }
+
   const chunks: string[] = [];
 
   if (text.length <= chunkSize) {
@@ -56,13 +66,20 @@ export function chunkText(
       }
     }
 
-    chunks.push(text.slice(start, end).trim());
-    start = end - overlap;
+    const chunk = text.slice(start, end).trim();
+    if (chunk.length > 0) {
+      chunks.push(chunk);
+    }
+
+    const nextStart = end - overlap;
+    if (nextStart <= start) {
+      break;
+    }
+    start = nextStart;
     if (start < 0) start = 0;
 
-    // Avoid infinite loop if overlap >= chunkSize
     if (start >= end) break;
   }
 
-  return chunks.filter((c) => c.length > 0);
+  return chunks;
 }
