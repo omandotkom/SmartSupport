@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     "@xenova/transformers",
     "vectra",
     "gpt-3-encoder",
+    "better-sqlite3",
+    "@prisma/adapter-better-sqlite3",
   ],
   experimental: {
     serverActions: {
@@ -22,6 +24,8 @@ const nextConfig: NextConfig = {
         "@xenova/transformers",
         "vectra",
         "gpt-3-encoder",
+        "better-sqlite3",
+        "@prisma/adapter-better-sqlite3",
       );
     }
     return config;
