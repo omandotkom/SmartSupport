@@ -5,6 +5,7 @@ metadata:
   labels:
     app: smartsupport
 spec:
+  storageClassName: ocs-storagecluster-cephfs
   accessModes:
     - ReadWriteOnce
   resources:
