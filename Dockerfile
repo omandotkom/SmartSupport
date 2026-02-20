@@ -1,7 +1,9 @@
-FROM node:20-alpine AS base
+FROM node:20-bookworm AS base
 
 # Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++ cmake
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git python3 make g++ cmake \
+  && rm -rf /var/lib/apt/lists/*
 
 FROM base AS builder
 WORKDIR /app
@@ -13,7 +15,7 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -21,7 +23,6 @@ ENV NODE_ENV=production
 # Copy standalone build
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public 2>/dev/null || true
 
 # Copy Prisma client and schema
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
