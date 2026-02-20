@@ -1,0 +1,29 @@
+.git
+.github
+.next
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local runtime data / artifacts
+data
+coverage
+dist
+tmp
+*.log
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Local env/secrets
+.env
+.env.*
+!.env.example
+
+# Deployment manifests are not needed inside app image
+openshift
